@@ -52,20 +52,25 @@ class MultiHeadSelfAttention(nn.Module):
         self.values = nn.Linear(self.head_dim, self.head_dim, bias=False)
         self.keys = nn.Linear(self.head_dim, self.head_dim, bias=False)
         self.queries = nn.Linear(self.head_dim, self.head_dim, bias=False)
-        self.fc_out = nn.Linear(heads * self.head_dim, embed_size)
+        self.fc_out = nn.Linear(self.head_dim*16, embed_size)
 
     def forward(self, values, keys, query):
         # Split embedding into self.heads pieces
-        values = values.reshape(values.shape[0], values.shape[1], self.heads, self.head_dim)
-        keys = keys.reshape(keys.shape[0], keys.shape[1], self.heads, self.head_dim)
-        queries = query.reshape(query.shape[0], query.shape[1], self.heads, self.head_dim)
+        values = values.squeeze()
+        keys = keys.squeeze()
+        queries = query.squeeze()
+        #print("dim", self.head_dim)
+        #print(values.shape, keys.shape, queries.shape)
 
-        energy = torch.einsum("nqhd,nkhd->nhqk", [queries, keys])
-        attention = torch.softmax(energy / (self.embed_size ** (1 / 2)), dim=3)
+        energy = torch.ger(queries, keys)
+        attention = torch.softmax(energy / (self.embed_size ** (1 / 2)), dim=-2)
 
-        out = torch.einsum("nhql,nlhd->nqhd", [attention, values])
-        out = out.reshape(out.shape[0], out.shape[1], -1)
+        out = torch.matmul(attention, values)
+        #print("out", out.shape)
         out = self.fc_out(out)
+        out = out.reshape(1, 1, out.shape[0])
+
+        #print(out.shape)
         return out
     
 class CAIM(torch.nn.Module):
@@ -90,23 +95,24 @@ class CAIM(torch.nn.Module):
         self.conv = nn.Conv2d(2, 1, 7, padding=3, bias=False)
         self.conv1 = nn.Conv2d(2*channels,channels,1,1)
 
-    def forward(self,x):
+    def forward(self, x):
+        print(x.shape)
         #CA
         w_avg = self.ca_avg(x)
         w_max = self.ca_max(x)
         w = torch.cat([w_avg,w_max], dim=1)
         # w = self.conv1(w)
-
+        print(w.shape)
         #SA
 
         batch_size, num_channels, height, width = w.shape
         w = w.view(batch_size, num_channels, height * width)  # 调整为(batch_size, channels, height * width)
         w = w.transpose(1, 2)  # 调整为(batch_size, height * width, channels) 以匹配多头自注意力输入
 
+        #print(w.shape)
         # Multi-Head Self-Attention
         w = self.multihead_attention(w, w, w)
-
-        w = w.transpose(1, 2).view(batch_size, num_channels, height, width)
+        w = w.transpose(1, 2).view(batch_size, num_channels//2, height, width)
 
         avgout = torch.mean(x, dim=1, keepdim=True)
         maxout, _ = torch.max(x, dim=1, keepdim=True)
@@ -114,7 +120,10 @@ class CAIM(torch.nn.Module):
         x_sa = self.conv(x_sa)
         
         # Combine CA and SA
+        #print("sa", x_sa.shape)
         output = self.sigmod(w * x_sa)
+
+        #print(output.shape)
         return output
 
 class UpsampleReshape(torch.nn.Module):
@@ -211,7 +220,9 @@ class Generator(nn.Module):
     #CROSS-SCALE-DECODER
         # CAIM4
         F_4_ = torch.cat([ir4,vis4],dim=1)#256
+        print(F_4_.shape)
         F_4 = self.conv_1(F_4_)#128
+        print(F_4.shape)
         fusion4_w = self.CAIM4(F_4)
         fusion4_=torch.cat([fusion4_w*ir4 ,(1-fusion4_w)*vis4],dim=1)#256
         fusion4=self.conv_2(fusion4_)
