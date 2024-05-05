@@ -7,11 +7,7 @@ import torch
 import os
 from Models import Generator
 
-flag = 1
-if flag == 0:
-    IS_TRAINING = True
-else:
-    IS_TRAINING = False
+IS_TRAINING = True
 
 def load_model(model_path):
     G_model = Generator()
