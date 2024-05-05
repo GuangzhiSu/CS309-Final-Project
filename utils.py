@@ -10,7 +10,7 @@ from os import listdir
 from os.path import join
 # from scipy.misc import imresize
 import cv2
-from imageio import imread, imsave
+from imageio.v2 import imread, imsave
 from torchvision import transforms
 #BTSFusion新增
 from guided_filter import GuidedFilter
@@ -117,7 +117,7 @@ def save_feat(index,C,ir_atten_feat,vi_atten_feat,result_path):
 
 def get_image(path, height=args.hight, width=args.width, mode='L'):
     if mode == 'L':
-        image = imread(path, mode=mode)
+        image = imread(path, pilmode=mode)
         image = (image - 127.5) / 127.5
         #image = image/255
     elif mode == 'RGB':

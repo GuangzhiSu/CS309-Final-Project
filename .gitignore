@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.model
+models_training/
 .idea/
 
 # C extensions

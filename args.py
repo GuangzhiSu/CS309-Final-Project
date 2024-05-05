@@ -4,8 +4,8 @@ class args():
 
     datasets_prepared = False
 
-    train_ir = r'C:\\Users\\sunbinyan\\Desktop\\CS309\\Final Project\\IJMLC-main\\Datasets\\Test_data_TNO\\IR'
-    train_vi = r'C:\\Users\\sunbinyan\\Desktop\\CS309\\Final Project\\IJMLC-main\\Datasets\\Test_data_TNO\\VIS'
+    train_ir = r'Test_data_TNO\\IR'
+    train_vi = r'Test_data_TNO\\VIS'
 
 
     hight = 256
